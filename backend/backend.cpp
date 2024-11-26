@@ -51,12 +51,16 @@
 #include "backend.h"
 #include "syncserver.h"
 
+int i = 0;
+
 Backend::Backend(QObject *parent) :
     QObject(parent)
     ,m_httpServerAddress("")
     ,m_httpServerPort(0)
 {
     syncServer = new SyncServer(this);
+
+    connect(syncServer,&SyncServer::deviceConnected,this,&Backend::addDeviceListData);
 
     // 动态绑定 SyncServer 的绑定值
     m_httpServerAddress.setBinding([this]() {
@@ -65,7 +69,6 @@ Backend::Backend(QObject *parent) :
     m_httpServerPort.setBinding([this]() {
         return syncServer->bindableHttpServerPort().value();
     });
-
 }
 
 void Backend::startButtonClicked()
@@ -73,6 +76,22 @@ void Backend::startButtonClicked()
     qDebug() << " Start Button was clicked!";
 
     syncServer->startServers();
+}
+
+void Backend::addItem()
+{
+    QString message = QString("this is a test message %1").arg(i++);
+    m_listModel.addItem("IPHONE","192.0.0.1",message);
+}
+
+void Backend::addDeviceListData(const QString &deviceName, const QString &deviceIP, const QString &status)
+{
+    m_listModel.addItem(deviceName,deviceIP,status);
+}
+
+MyListModel* Backend::listModel()
+{
+    return &m_listModel;
 }
 
 QString Backend::httpServerAddress() const
@@ -98,5 +117,4 @@ QBindable<quint16> Backend::bindableHttpServerPort()
     qDebug()<<"[bindableHttpServerPort]"<<m_httpServerPort;
     return &m_httpServerPort;
 }
-
 

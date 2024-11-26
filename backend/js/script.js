@@ -3,6 +3,44 @@ let webSocket;
 let wsAddress;
 let fileMetadataSent = false;  // 标记元数据是否已发送
 
+
+document.addEventListener("DOMContentLoaded", () => {
+    const dropZone = document.getElementById("dropZone");
+
+    if (!dropZone) {
+        console.error("Drop zone element not found!");
+        return;
+    }
+
+    dropZone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("dragover");
+
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            console.log("File dropped:", file.name);
+
+            const fileInput = document.getElementById("fileInput");
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+
+            //sendFile();
+        }
+    });
+});
+
+
 // 等待页面加载完成再执行
 window.onload = function() {
     console.log("Binding events");  // 添加调试信息
@@ -14,6 +52,8 @@ window.onload = function() {
     wsAddress = "ws://" + address + ":" + port;
 
     console.log("WebSocket address is:", wsAddress);
+
+    startConnection();
 };
 
 // 定义 WebSocket 连接函数

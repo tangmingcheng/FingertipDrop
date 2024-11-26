@@ -54,14 +54,18 @@
 #include <qqmlregistration.h>
 #include <QDebug>
 #include <QProperty>
+#include <QQmlListProperty>
+#include "mylistmodel.h"
 
 class SyncServer;
+
 
 class Backend : public QObject
 {
     Q_OBJECT
     QML_ELEMENT
 
+    Q_PROPERTY(MyListModel* listModel READ listModel CONSTANT)
     Q_PROPERTY(QString httpServerAddress READ httpServerAddress  BINDABLE bindableHttpServerAddress)
     Q_PROPERTY(quint16 httpServerPort READ httpServerPort  BINDABLE bindableHttpServerPort)
 
@@ -69,20 +73,27 @@ class Backend : public QObject
 public:
     explicit Backend(QObject *parent = nullptr);
 
+    Q_INVOKABLE void addItem();
+
+public slots:
+    void startButtonClicked();  // 添加槽函数
+    void addDeviceListData(const QString &deviceName, const QString &deviceIP, const QString &status);
+
+private:
+    SyncServer *syncServer;
+
+public:
+    MyListModel* listModel();
     QString httpServerAddress() const;
     QBindable<QString> bindableHttpServerAddress();
 
     quint16 httpServerPort() const;
     QBindable<quint16> bindableHttpServerPort();
 
-
-public slots:
-    void startButtonClicked();  // 添加槽函数
-
 private:
-    SyncServer *syncServer;
-
+    MyListModel m_listModel;
     QProperty<QString> m_httpServerAddress;
     QProperty<quint16> m_httpServerPort;
+
 
 };

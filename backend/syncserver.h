@@ -28,12 +28,13 @@ public:
     void startServers();
     void stopServers();
 
-signals:
-    void statusUpdated(const QString &message);  // 用于更新状态标签
-
 private:
     QString getLocalIPAddress();
     QString generateHtmlContent(quint16 websocketPort);
+    QString parseDeviceName(const QString &deviceInfo);
+
+signals:
+    void deviceConnected(const QString &deviceName, const QString &deviceIP, const QString &status);
 
 private slots:
     void onNewWebSocketConnection();
@@ -58,13 +59,16 @@ private:
 
     QString htmlPath;
     QString jsPath;
+    QString cssPath;
 
 public:
     QBindable<QString> bindableHttpServerAddress();
     QBindable<quint16> bindableHttpServerPort();
+
 private:
     QProperty<QString> m_httpServerAddress;
     QProperty<quint16> m_httpServerPort;
+
 };
 
 #endif // SYNCSERVER_H

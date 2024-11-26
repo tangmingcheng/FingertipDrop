@@ -55,7 +55,7 @@ Rectangle {
                 RowLayout {
                     anchors.fill: parent
                     antialiasing: true
-                    spacing: 10
+                    spacing: 3
 
                     // 连接状态（红绿圆形指示灯）
                     Rectangle {
@@ -75,7 +75,7 @@ Rectangle {
                         text: qsTr("iphone")
                         Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                         font.bold: true
-                        font.pointSize: 12
+                        font.pointSize: 8
                     }
 
                     // IP 地址
@@ -85,7 +85,7 @@ Rectangle {
                         text: "192.168.0.1"
                         Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                         color: "#eaeaea"
-                        font.pointSize: 12
+                        font.pointSize: 8
                     }
                 }
                 MouseArea {

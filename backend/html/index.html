@@ -4,30 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>File Transfer</title>
-    <style>
-        /* 基础样式 */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        input, button {
-            display: block;
-            margin-bottom: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
     <script src="script.js"></script>
 </head>
 <body>
-<h1>File Transfer</h1>
+<h1>Fingertip Drop</h1>
 
 <!-- 隐藏 WebSocket 地址信息 -->
 <div id="wsConfig" data-address="{{WEBSOCKET_ADDRESS}}" data-port="{{WEBSOCKET_PORT}}" style="display:none;"></div>
-
-<input type="file" id="fileInput" accept="image/*"/>
-<button onclick="startConnection()">Connect</button>
-<button onclick="sendFile()">Send File</button>
+<div id="dropZone">Drag files here </div>
+<div class="button-container">
+        <input type="file" id="fileInput" accept="image/*"/>
+        <button onclick="sendFile()">Send File</button>
+</div>
 </body>
 </html>

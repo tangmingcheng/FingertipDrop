@@ -11,10 +11,11 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
-    id: rectangle
+    id: root
     width: 350
     height: 420
     color: "#333333"
+    property var devicelistModel
 
     // 模拟数据模型
     ListModel {
@@ -40,38 +41,20 @@ Rectangle {
     ListView {
         id: listView
         anchors.fill: parent
-        model: deviceModel
+        model: root.devicelistModel
 
         spacing: 10
 
         delegate: DeviceListItem {
             anchors.horizontalCenter: parent.horizontalCenter
 
-            deviceName: model.name
-            deviceIP: model.ip
-            connectstatus: model.status
+            deviceName: model.data1
+            deviceIP: model.data2
+            connectstatus: model.data3
         }
 
         // 空内容提示
         ScrollBar.vertical: ScrollBar {}
     }
 
-    // 测试动态更新的工具按钮
-    Button {
-        id: addbutton
-        text: "Add Device"
-        anchors.bottom: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-
-        Connections {
-            target: addbutton
-            onClicked: {
-                deviceModel.append({
-                                       "name": "Device " + (deviceModel.count + 1),
-                                       "ip": "192.168.0." + (deviceModel.count + 1),
-                                       "status": "Disconnected"
-                                   })
-            }
-        }
-    }
 }

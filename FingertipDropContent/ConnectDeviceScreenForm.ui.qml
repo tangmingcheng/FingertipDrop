@@ -13,6 +13,7 @@ Item {
     id: _item
     width: Constants.width
     height: Constants.height
+    property alias devicemodel: deviceList.devicelistModel
 
     Flatbackground {
         id: backgroundfull

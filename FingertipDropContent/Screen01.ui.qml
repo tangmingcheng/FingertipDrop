@@ -39,6 +39,7 @@ Item {
         id: connectscreen
         anchors.fill: parent
         visible: false
+        devicemodel: backend.listModel
     }
 
     Connections {
@@ -55,6 +56,8 @@ Item {
             root.state = "connect"
         }
     }
+
+
 
     states: [
         State {

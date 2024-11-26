@@ -6,11 +6,11 @@ SyncServer::SyncServer(QObject *parent)
     , webSocketServer(new QWebSocketServer(QStringLiteral("SyncServer"), QWebSocketServer::NonSecureMode, this))
     , httpServer(new QTcpServer(this))
     , clipboard(QGuiApplication::clipboard())
-    , htmlPath("index.html")
-    , jsPath("script.js")
+    , htmlPath("qml/Backend/html/index.html")
+    , jsPath("qml/Backend/js/script.js")
+    , cssPath("qml/Backend/css/style.css")
     , m_httpServerAddress("")
     , m_httpServerPort(0)
-
 {
     connect(clipboard, &QClipboard::dataChanged, this, &SyncServer::onClipboardChanged);
 }
@@ -66,7 +66,6 @@ void SyncServer::startServers()
 {
     // 启动 WebSocket 服务器
     if (webSocketServer->listen(QHostAddress::Any, 12345)) {
-        emit statusUpdated("WebSocket server started on port 12345");
         QString serverAddress = webSocketServer->serverAddress().toString();
         quint16 serverPort = webSocketServer->serverPort();
         qDebug() << "[WebSocket] Server started at ws://" << serverAddress << ":" << serverPort;
@@ -75,20 +74,17 @@ void SyncServer::startServers()
         quint16 websocketPort = webSocketServer->serverPort();
         generatedHtmlContent = generateHtmlContent(websocketPort);
     } else {
-        emit statusUpdated("Failed to start WebSocket server");
         qDebug() << "[WebSocket] Failed to start server";
     }
 
     // 启动 HTTP 服务器
     if (httpServer->listen(QHostAddress::Any, 8080)) {
-        emit statusUpdated("HTTP server started on port 8080");
         QString serverAddress = httpServer->serverAddress().toString();
         quint16 serverPort = httpServer->serverPort();
         qDebug() << "[HTTP] Server started at " << serverAddress << ":" << serverPort;
         connect(httpServer, &QTcpServer::newConnection, this, &SyncServer::onHttpRequest);
         updateHttpServerInfo();
     } else {
-        emit statusUpdated("Failed to start HTTP server");
         qDebug() << "[HTTP] Failed to start server";
     }
 
@@ -101,14 +97,12 @@ void SyncServer::stopServers()
     // 停止 WebSocket 服务器
     if (webSocketServer->isListening()) {
         webSocketServer->close();
-        emit statusUpdated("WebSocket server stopped");
         qDebug() << "[WebSocket] Server stopped";
     }
 
     // 停止 HTTP 服务器
     if (httpServer->isListening()) {
         httpServer->close();
-        emit statusUpdated("HTTP server stopped");
         qDebug() << "[HTTP] Server stopped";
     }
 }
@@ -128,8 +122,6 @@ void SyncServer::onNewWebSocketConnection()
                  << clientSocket->peerAddress().toString()
                  << "on port"
                  << clientSocket->peerPort();
-
-        emit statusUpdated("New WebSocket client connected");
     }
 }
 
@@ -150,8 +142,17 @@ void SyncServer::onWebSocketMessageReceived(const QString &message)
     QJsonObject obj = doc.object();
     if (obj.contains("type") && obj["type"].toString() == "deviceInfo") {
         QString deviceInfo = obj["info"].toString();
+        QString deviceIP = senderClient->peerAddress().toString();
+        quint16 devicePort = senderClient->peerPort();
+
         qDebug() << "[WebSocket] Device info from" << senderClient->peerAddress().toString() << ":" << deviceInfo;
-        emit statusUpdated("[Connect]"+deviceInfo);
+
+        // 使用通用方法提取设备名
+        QString deviceName = parseDeviceName(deviceInfo);
+
+        // 发射信号通知 Backend
+        emit deviceConnected(deviceName, deviceIP, "Connected");
+
     } else {
         // 解析 JSON 元数据
         if (obj["type"].toString() == "fileMetadata") {
@@ -229,7 +230,6 @@ void SyncServer::onWebSocketDisconnected()
     if (clientSocket) {
         clients.removeAll(clientSocket);
         clientSocket->deleteLater();
-        emit statusUpdated("WebSocket client disconnected");
         qDebug() << "[WebSocket] Client disconnected from" << clientSocket->peerAddress().toString();
     }
 }
@@ -258,6 +258,9 @@ void SyncServer::onHttpRequest()
         } else if (requestStr.contains("GET / ")) {
             filePath = htmlPath;
             qDebug() << "[HTTP] Serving index.html";
+        } else if (requestStr.contains("GET /style.css")) {
+            filePath = cssPath;
+            qDebug() << "[HTTP] Serving style.css";
         } else {
             // 如果请求路径无法识别，返回404
             //QString response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
@@ -283,13 +286,15 @@ void SyncServer::onHttpRequest()
         QString contentType = "text/html";
         if (filePath.endsWith(".js")) {
             contentType = "application/javascript";
+        } else if (filePath.endsWith(".css")) {
+            contentType = "text/css";
         }
 
         QString response = "HTTP/1.1 200 OK\r\n";
         response += "Content-Type: " + contentType + "; charset=UTF-8\r\n";
 
         if (contentType == "text/html") {
-            response += "Content-Length: " + QString::number(generatedHtmlContent.size()) + "\r\n";
+            response += "Content-Length: " + QString::number(generatedHtmlContent.toUtf8().size()) + "\r\n";
             response += "Connection: close\r\n";
             response += "\r\n";
             // 确保数据写入完成
@@ -324,7 +329,6 @@ void SyncServer::onHttpRequest()
 void SyncServer::onClipboardChanged()
 {
     QString clipboardText = clipboard->text();
-    //emit statusUpdated("Clipboard changed: " + clipboardText);
     qDebug() << "[Clipboard] Clipboard content changed:" << clipboardText;
 
     // 将剪贴板内容广播给所有 WebSocket 客户端
@@ -346,4 +350,32 @@ void SyncServer::updateHttpServerInfo()
         m_httpServerAddress.setValue("");
         m_httpServerPort.setValue(0);
     }
+}
+
+QString SyncServer::parseDeviceName(const QString &deviceInfo)
+{
+    // 定义常见设备的正则表达式
+    QRegularExpression windowsRegex("Windows NT [\\d\\.]+");
+    QRegularExpression androidRegex("Android [\\d\\.]+");
+    QRegularExpression iosRegex("iPhone OS [\\d_]+|iPad OS [\\d_]+");
+    QRegularExpression macRegex("Mac OS X [\\d_]+");
+    QRegularExpression linuxRegex("Linux [^;\\)\\s]+");
+
+    QRegularExpressionMatch match;
+
+    // 逐一匹配设备名
+    if ((match = windowsRegex.match(deviceInfo)).hasMatch()) {
+        return match.captured(0); // 捕获 Windows 版本
+    } else if ((match = androidRegex.match(deviceInfo)).hasMatch()) {
+        return match.captured(0); // 捕获 Android 版本
+    } else if ((match = iosRegex.match(deviceInfo)).hasMatch()) {
+        return match.captured(0); // 捕获 iOS 版本
+    } else if ((match = macRegex.match(deviceInfo)).hasMatch()) {
+        return match.captured(0); // 捕获 MacOS 版本
+    } else if ((match = linuxRegex.match(deviceInfo)).hasMatch()) {
+        return match.captured(0); // 捕获 Linux 版本
+    }
+
+    // 如果未匹配到，返回默认值
+    return "Unknown Device";
 }

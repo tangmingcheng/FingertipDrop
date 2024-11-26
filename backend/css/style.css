@@ -1,0 +1,47 @@
+/* 基础样式 */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 水平居中 */
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+#dropZone {
+    border: 2px dashed #ccc;
+    padding: 20px;
+    text-align: center;
+    width: 90%; /* 设置宽度以适应居中对齐 */
+}
+
+#dropZone.dragover {
+    border-color: blue;
+}
+
+#fileInput {
+    margin-top: 20px; /* 增加间距以避免与拖放区域重叠 */
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column; /* 垂直排列按钮 */
+    align-items: center; /* 水平居中 */
+    gap: 10px;
+}
+
+input[type="file"] {
+    display: block;
+    width: 200px;
+    text-align: center;
+}
+
+button {
+    display: block;
+    width: 200px;
+    height: 30px;
+    text-align: center;
+}
