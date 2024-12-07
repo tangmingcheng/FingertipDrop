@@ -9,11 +9,12 @@ Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import FingertipDrop 1.0
 
 Rectangle {
     id: root
-    width: 350
-    height: 420
+    width: Constants.width * 0.5
+    height: Constants.height
     color: "#333333"
     property var devicelistModel
 

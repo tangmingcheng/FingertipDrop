@@ -9,11 +9,12 @@ Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import FingertipDrop 1.0
 
 Rectangle {
     id: root
-    width: 300
-    height: 70
+    width: Constants.width * 0.5
+    height:50
     color: "#333333"
 
     clip: true
@@ -40,8 +41,8 @@ Rectangle {
     Rectangle {
         id: maincontent
         x: slideOffset
-        width: 380
-        height: 70
+        width: Constants.width * 0.5 + 80
+        height: 30
         color: "#00ffffff"
         RowLayout {
             anchors.fill: parent
@@ -49,7 +50,7 @@ Rectangle {
             spacing: 0
             Rectangle {
                 id: messagecontent
-                width: 300
+                width: Constants.width * 0.5
                 height: root.height
                 color: "#00ffffff"
                 RowLayout {
@@ -103,7 +104,7 @@ Rectangle {
                 font.pointSize: 8
                 text: qsTr("Disconnect")
                 width: 80
-                height: 70
+                height: 30
                 hoverEnabled: true
                 y: 0
             }

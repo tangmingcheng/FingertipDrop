@@ -3,7 +3,6 @@
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-
 #include "autogen/environment.h"
 
 int main(int argc, char *argv[])

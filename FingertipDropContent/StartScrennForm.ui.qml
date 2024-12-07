@@ -33,7 +33,7 @@ Item {
         color: "#eaeaea"
         text: qsTr("Start")
         anchors.verticalCenter: parent.verticalCenter
-        font.pixelSize: 40
+        font.pixelSize: 36
         font.family: "Maven Pro"
         style: Text.Outline
         anchors.horizontalCenter: parent.horizontalCenter
@@ -41,8 +41,6 @@ Item {
 
     Image {
         id: startbutton
-        width: 300
-        height: 300
         anchors.verticalCenter: parent.verticalCenter
         source: "assets/drumcopy_temp.png"
         anchors.horizontalCenter: parent.horizontalCenter

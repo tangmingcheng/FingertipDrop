@@ -37,8 +37,6 @@ Item {
 
     Image {
         id: buttonoutlne
-        width: 300
-        height: 300
         anchors.verticalCenter: parent.verticalCenter
         anchors.horizontalCenter: parent.horizontalCenter
         source: "assets/buttonoutlne.png"
@@ -63,7 +61,7 @@ Item {
         font.family: "Maven Pro"
         color: "#e544a1"
         text: qsTr("Ready!")
-        font.pixelSize: 40
+        font.pixelSize: 36
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         anchors.verticalCenter: parent.verticalCenter
@@ -72,10 +70,10 @@ Item {
 
     Text {
         id: httpstatuslabel
-        y: 366
+        y: 235
         color: "#B8B8B8"
         text: "IP: " + httpAddress + " Port: " + httpPort
-        font.pixelSize: 21
+        font.pixelSize: 12
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         anchors.horizontalCenterOffset: 0
@@ -84,10 +82,10 @@ Item {
     }
     Text {
         id: connectnumlabel
-        y: 397
+        y: 251
         color: "#B8B8B8"
         text: "Connect number: " + "0"
-        font.pixelSize: 18
+        font.pixelSize: 12
         horizontalAlignment: Text.AlignHCenter
         anchors.horizontalCenterOffset: 0
         anchors.horizontalCenter: parent.horizontalCenter
@@ -239,6 +237,25 @@ Item {
             PropertyChanges {
                 target: timeline
                 currentFrame: 120
+            }
+
+            PropertyChanges {
+                target: text1
+                font.pixelSize: 36
+            }
+
+            PropertyChanges {
+                target: httpstatuslabel
+                y: 235
+                font.pixelSize: 12
+                anchors.horizontalCenterOffset: 0
+            }
+
+            PropertyChanges {
+                target: connectnumlabel
+                y: 251
+                font.pixelSize: 12
+                anchors.horizontalCenterOffset: -2
             }
         }
     ]
