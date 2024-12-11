@@ -52,16 +52,17 @@ Item {
     }
 
     Connections {
-        target: readyscreen
-        onReadyClicked: {
-            root.state = "connect"
+        target: connectscreen
+        onFileAccepted: {
+            backend.sendFile(filePath)
         }
     }
 
     Connections {
-        target: connectscreen
-        onFileAccepted: {
-            backend.sendFile(filePath)
+        target: backend
+        onUpdateClientStatus:{
+             console.log("connect",connectActive ? "连接中" : "无连接")
+             root.state = "connect"
         }
     }
 

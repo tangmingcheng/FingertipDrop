@@ -55,6 +55,10 @@ QtObject {
 
     property string httpServerAddress: "192.168.0.0"
     property real httpServerPort: 0
+
+    // 定义两个信号，防止报错
+    signal updateClientCount(int count)
+    signal updateClientStatus(bool connectActive)
     // 模拟槽函数
     function startButtonClicked() {
         console.log("Mock: Button was clicked!");

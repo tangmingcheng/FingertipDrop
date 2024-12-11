@@ -35,6 +35,8 @@ private:
 
 signals:
     void deviceConnected(const QString &deviceName, const QString &deviceIP, const QString &status);
+    void clientsChanged(int count);
+    void clientsStatusChanged(bool active);
 
 public slots:
     void handleFilePath(const QString &rawFilePath);

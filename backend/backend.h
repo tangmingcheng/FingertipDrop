@@ -77,6 +77,8 @@ public:
 
 signals:
     void filePathReady(const QString &filePath);
+    void updateClientCount(int count);
+    void updateClientStatus(bool connectActive);
 
 public slots:
     void startButtonClicked();  // 添加槽函数

@@ -87,9 +87,6 @@ void SyncServer::startServers()
     } else {
         qDebug() << "[HTTP] Failed to start server";
     }
-
-
-
 }
 
 void SyncServer::stopServers()
@@ -122,6 +119,13 @@ void SyncServer::onNewWebSocketConnection()
                  << clientSocket->peerAddress().toString()
                  << "on port"
                  << clientSocket->peerPort();
+
+        // 检测客户端数量变化
+        int clientCount = clients.size();
+        emit clientsChanged(clientCount);
+        if (clientCount == 1) {
+            emit clientsStatusChanged(true);  // 第一个客户端连接时
+        }
     }
 }
 
@@ -231,6 +235,13 @@ void SyncServer::onWebSocketDisconnected()
         clients.removeAll(clientSocket);
         clientSocket->deleteLater();
         qDebug() << "[WebSocket] Client disconnected from" << clientSocket->peerAddress().toString();
+
+        // 检测客户端数量变化
+        int clientCount = clients.size();
+        emit clientsChanged(clientCount);
+        if (clientCount == 0) {
+            emit clientsStatusChanged(false);  // 最后一个客户端断开时
+        }
     }
 }
 

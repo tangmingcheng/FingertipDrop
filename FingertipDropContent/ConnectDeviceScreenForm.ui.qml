@@ -26,7 +26,8 @@ Item {
     DeviceList {
         id: deviceList
         anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.right: parent.right
+        anchors.rightMargin: 20
     }
 
     Text {
@@ -61,8 +62,10 @@ Item {
     Connections {
         target: filedialog
         onAccepted: {
-            filename.text = filedialog.selectedFile
-            _item.fileAccepted(filedialog.selectedFile)
+            var filePath = String(filedialog.selectedFile)
+            var fileName = filePath.substring(filePath.lastIndexOf("/") + 1)
+            filename.text = fileName
+            fileAccepted(filedialog.selectedFile)
         }
     }
 }

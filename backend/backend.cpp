@@ -62,6 +62,8 @@ Backend::Backend(QObject *parent) :
 
     connect(syncServer,&SyncServer::deviceConnected,this,&Backend::addDeviceListData);
     connect(this, &Backend::filePathReady, syncServer, &SyncServer::handleFilePath);
+    connect(syncServer, &SyncServer::clientsChanged, this, &Backend::updateClientCount);
+    connect(syncServer, &SyncServer::clientsStatusChanged, this, &Backend::updateClientStatus);
 
     // 动态绑定 SyncServer 的绑定值
     m_httpServerAddress.setBinding([this]() {

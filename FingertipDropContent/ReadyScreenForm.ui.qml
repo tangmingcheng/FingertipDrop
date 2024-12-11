@@ -20,7 +20,6 @@ Item {
     property string httpAddress: "192.168.0.1"
     property real httpPort: 8080
     property real buttonoutlneRotation
-    signal readyClicked
 
     Flatbackground {
         id: backgroundfull
@@ -50,7 +49,6 @@ Item {
                 target: readyMA
                 onClicked: {
                     console.log("readyMA clicked")
-                    readyClicked()
                 }
             }
         }
