@@ -61,6 +61,7 @@ Backend::Backend(QObject *parent) :
     syncServer = new SyncServer(this);
 
     connect(syncServer,&SyncServer::deviceConnected,this,&Backend::addDeviceListData);
+    connect(this, &Backend::filePathReady, syncServer, &SyncServer::handleFilePath);
 
     // 动态绑定 SyncServer 的绑定值
     m_httpServerAddress.setBinding([this]() {
@@ -71,17 +72,16 @@ Backend::Backend(QObject *parent) :
     });
 }
 
+void Backend::sendFile(const QString &filePath)
+{
+    emit filePathReady(filePath);
+}
+
 void Backend::startButtonClicked()
 {
     qDebug() << " Start Button was clicked!";
 
     syncServer->startServers();
-}
-
-void Backend::addItem()
-{
-    QString message = QString("this is a test message %1").arg(i++);
-    m_listModel.addItem("IPHONE","192.0.0.1",message);
 }
 
 void Backend::addDeviceListData(const QString &deviceName, const QString &deviceIP, const QString &status)

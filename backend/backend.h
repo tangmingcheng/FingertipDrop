@@ -73,7 +73,10 @@ class Backend : public QObject
 public:
     explicit Backend(QObject *parent = nullptr);
 
-    Q_INVOKABLE void addItem();
+    Q_INVOKABLE void sendFile(const QString &filePath);
+
+signals:
+    void filePathReady(const QString &filePath);
 
 public slots:
     void startButtonClicked();  // 添加槽函数

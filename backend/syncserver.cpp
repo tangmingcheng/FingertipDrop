@@ -331,6 +331,7 @@ void SyncServer::onClipboardChanged()
     QString clipboardText = clipboard->text();
     qDebug() << "[Clipboard] Clipboard content changed:" << clipboardText;
 
+    qDebug()<<"[onClipboardChanged]clients"<<clients.size();
     // 将剪贴板内容广播给所有 WebSocket 客户端
     for (QWebSocket *client : clients) {
         if (client->isValid()) {
@@ -378,4 +379,67 @@ QString SyncServer::parseDeviceName(const QString &deviceInfo)
 
     // 如果未匹配到，返回默认值
     return "Unknown Device";
+}
+
+
+void SyncServer::handleFilePath(const QString &rawFilePath)
+{
+    QString filePath = rawFilePath;
+
+    if (filePath.startsWith("file:///")) {
+        filePath = QUrl(filePath).toLocalFile();  // 移除 "file:///" 前缀
+    }
+
+    if (filePath.isEmpty()) {
+        qWarning() << "[SyncServer] 文件路径为空，无法处理";
+        return;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "[SyncServer] 无法打开文件:" << filePath;
+        return;
+    }
+
+    QByteArray fileData = file.readAll();
+    file.close();
+
+    QFileInfo fileInfo(filePath);
+    QString fileName = fileInfo.fileName();
+
+    qDebug() << "[SyncServer] 文件已读取:" << fileName << ", 大小:" << fileData.size() << "字节";
+
+    // 构造文件元数据 JSON
+    QJsonObject metadata;
+    metadata["type"] = "fileMetadata";
+    metadata["filename"] = fileName;
+    metadata["filetype"] = "application/octet-stream";
+
+    QJsonDocument doc(metadata);
+    QString jsonString = doc.toJson(QJsonDocument::Compact);
+
+    qDebug()<<"clients"<<clients.size();
+    // 发送文件和元数据到客户端
+    for (QWebSocket *client : clients) {
+        if (client && client->isValid()) {
+            // 连接到字节写入完成信号
+            connect(client, &QWebSocket::bytesWritten, this, [=](qint64 bytes) {
+                static qint64 totalBytesWritten = 0;
+                totalBytesWritten += bytes;
+
+                if (totalBytesWritten >= fileData.size()) {
+                    qDebug() << "[SyncServer] 文件成功发送到客户端:" << fileName;
+                    //emit fileTransferCompleted(fileName);
+
+                    // 重置统计数据
+                    totalBytesWritten = 0;
+                    disconnect(client, &QWebSocket::bytesWritten, nullptr, nullptr);
+                }
+            });
+
+            // 发送元数据和文件
+            client->sendTextMessage(jsonString);
+            client->sendBinaryMessage(fileData);
+        }
+    }
 }

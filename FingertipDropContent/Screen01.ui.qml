@@ -40,6 +40,7 @@ Item {
         anchors.fill: parent
         visible: false
         devicemodel: backend.listModel
+
     }
 
     Connections {
@@ -54,6 +55,13 @@ Item {
         target: readyscreen
         onReadyClicked: {
             root.state = "connect"
+        }
+    }
+
+    Connections {
+        target: connectscreen
+        onFileAccepted: {
+            backend.sendFile(filePath)
         }
     }
 

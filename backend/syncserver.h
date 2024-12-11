@@ -36,6 +36,9 @@ private:
 signals:
     void deviceConnected(const QString &deviceName, const QString &deviceIP, const QString &status);
 
+public slots:
+    void handleFilePath(const QString &rawFilePath);
+
 private slots:
     void onNewWebSocketConnection();
     void onWebSocketMessageReceived(const QString &message);

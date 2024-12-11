@@ -29,8 +29,8 @@ Item {
 
     Image {
         id: backgroundcout
-        y: -2
-        anchors.horizontalCenterOffset: -2
+        y: 0
+        anchors.horizontalCenterOffset: 0
         source: "assets/backgroundcutout.png"
         anchors.horizontalCenter: parent.horizontalCenter
     }
@@ -255,7 +255,7 @@ Item {
                 target: connectnumlabel
                 y: 251
                 font.pixelSize: 12
-                anchors.horizontalCenterOffset: -2
+                anchors.horizontalCenterOffset: 0
             }
         }
     ]

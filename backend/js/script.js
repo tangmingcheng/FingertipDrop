@@ -2,6 +2,7 @@
 let webSocket;
 let wsAddress;
 let fileMetadataSent = false;  // 标记元数据是否已发送
+let receivedFileMetadata = null;  // 用于存储服务端发送的文件元数据
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -77,19 +78,20 @@ function startConnection() {
     };
 
     webSocket.onmessage = function(event) {
-        const message = event.data;
-
-        // 检查服务器是否发来确认接收元数据的消息
-        if (message === "READY_TO_RECEIVE_FILE") {
-            console.log("Server is ready to receive file data");
-            if (fileMetadataSent) {
-                sendBinaryFile();
-            }
-        } else {
-            console.log("Message received:", message);
-            alert("Received clipboard content: " + message);
-        } 
-        
+           if (typeof event.data === "string") {
+               // 检查服务器是否发来确认接收元数据的消息
+               if (event.data === "READY_TO_RECEIVE_FILE") {
+                   console.log("Server is ready to receive file data");
+                   if (fileMetadataSent) {
+                       sendBinaryFile();
+                   }
+               }
+               else{
+                   handleTextMessage(event.data);
+               }
+           } else {
+               handleBinaryMessage(event.data);
+           }
     };
 
     webSocket.onerror = function(error) {
@@ -102,6 +104,40 @@ function startConnection() {
         webSocket = null;
         fileMetadataSent = false;  // 重置元数据标记
     };
+}
+
+function handleTextMessage(message) {
+    console.log("Text message received:", message);
+    try {
+        const metadata = JSON.parse(message);
+        if (metadata.type === "fileMetadata") {
+            receivedFileMetadata = metadata;
+            console.log("Received file metadata:", receivedFileMetadata);
+        } else {
+            alert("Received message: " + message);
+        }
+    } catch (e) {
+        console.error("Failed to parse message as JSON:", message);
+        alert("Received message: " + message);
+    }
+}
+
+function handleBinaryMessage(data) {
+    console.log("Binary file received, size:", data.byteLength, "bytes");
+
+   if (!receivedFileMetadata || !receivedFileMetadata.filename) {
+       console.warn("File metadata missing, using default name.");
+       receivedFileMetadata = {
+           filename: "received_file",
+           filetype: "application/octet-stream"
+       };
+   }
+
+   const blob = new Blob([data], { type: receivedFileMetadata.filetype });
+   const link = document.createElement("a");
+   link.href = window.URL.createObjectURL(blob);
+   link.download = receivedFileMetadata.filename;
+   link.click();
 }
 
 // 定义发送文件函数
