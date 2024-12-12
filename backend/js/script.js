@@ -50,7 +50,7 @@ window.onload = function() {
     const wsConfigElement = document.getElementById("wsConfig");
     const address = wsConfigElement.getAttribute("data-address");
     const port = wsConfigElement.getAttribute("data-port");
-    wsAddress = "ws://" + address + ":" + port;
+    wsAddress = "wss://" + address + ":" + port;
 
     console.log("WebSocket address is:", wsAddress);
 

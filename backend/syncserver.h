@@ -3,12 +3,17 @@
 
 #include <QObject>
 #include <QTcpServer>
+#include <QSslServer>
 #include <QWebSocketServer>
 #include <QWebSocket>
 #include <QNetworkInterface>
+#include <QSslCertificate>
+#include <QSslKey>
+#include <QSslConfiguration>
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QFile>
+#include <QHostInfo>
 #include <QTextStream>
 #include <QDebug>
 #include <QJsonDocument>
@@ -33,6 +38,9 @@ private:
     QString generateHtmlContent(quint16 websocketPort);
     QString parseDeviceName(const QString &deviceInfo);
 
+    template<typename SocketType>
+    void handleHttpRequest(SocketType *clientConnection, const QString &requestStr);
+
 signals:
     void deviceConnected(const QString &deviceName, const QString &deviceIP, const QString &status);
     void clientsChanged(int count);
@@ -47,13 +55,14 @@ private slots:
     void onBinaryMessageReceived(const QByteArray &message);
     void onWebSocketDisconnected();
     void onHttpRequest();
+    void onSslConnection(QSslSocket *clientConnection);
     void onClipboardChanged();  // 剪贴板内容变化时调用
     void updateHttpServerInfo();
 
 private:
     QWebSocketServer *webSocketServer;
     QWebSocket *clientSocket;
-    QTcpServer *httpServer;
+    QSslServer *httpServer;
     QList<QWebSocket *> clients;
     QClipboard *clipboard;  // 用于监控剪贴板内容
     QString generatedHtmlContent;

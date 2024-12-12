@@ -3,8 +3,8 @@
 
 SyncServer::SyncServer(QObject *parent)
     : QObject(parent)
-    , webSocketServer(new QWebSocketServer(QStringLiteral("SyncServer"), QWebSocketServer::NonSecureMode, this))
-    , httpServer(new QTcpServer(this))
+    , webSocketServer(new QWebSocketServer(QStringLiteral("SyncServer"), QWebSocketServer::SecureMode, this))
+    , httpServer(new QSslServer(this))
     , clipboard(QGuiApplication::clipboard())
     , htmlPath("qml/Backend/html/index.html")
     , jsPath("qml/Backend/js/script.js")
@@ -64,11 +64,30 @@ QString SyncServer::generateHtmlContent(quint16 websocketPort) {
 
 void SyncServer::startServers()
 {
+    // 加载证书和密钥
+    QFile certFile("server.crt");
+    QFile keyFile("server.key");
+
+    if (!certFile.open(QIODevice::ReadOnly) || !keyFile.open(QIODevice::ReadOnly)) {
+        qWarning() << "[WebSocket] Failed to load certificate or key.";
+        return;
+    }
+
+    QSslCertificate certificate(&certFile, QSsl::Pem);
+    QSslKey privateKey(&keyFile, QSsl::Rsa, QSsl::Pem);
+
+    QSslConfiguration sslConfig;
+    sslConfig.setLocalCertificate(certificate);
+    sslConfig.setPrivateKey(privateKey);
+    sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfig.setProtocol(QSsl::TlsV1_2OrLater);
+
+    webSocketServer->setSslConfiguration(sslConfig);
     // 启动 WebSocket 服务器
     if (webSocketServer->listen(QHostAddress::Any, 12345)) {
         QString serverAddress = webSocketServer->serverAddress().toString();
         quint16 serverPort = webSocketServer->serverPort();
-        qDebug() << "[WebSocket] Server started at ws://" << serverAddress << ":" << serverPort;
+        qDebug() << "[WebSocket] Server started at wss://" << serverAddress << ":" << serverPort;
 
         connect(webSocketServer, &QWebSocketServer::newConnection, this, &SyncServer::onNewWebSocketConnection);
         quint16 websocketPort = webSocketServer->serverPort();
@@ -77,12 +96,13 @@ void SyncServer::startServers()
         qDebug() << "[WebSocket] Failed to start server";
     }
 
+    httpServer->setSslConfiguration(sslConfig);
     // 启动 HTTP 服务器
     if (httpServer->listen(QHostAddress::Any, 8080)) {
         QString serverAddress = httpServer->serverAddress().toString();
         quint16 serverPort = httpServer->serverPort();
         qDebug() << "[HTTP] Server started at " << serverAddress << ":" << serverPort;
-        connect(httpServer, &QTcpServer::newConnection, this, &SyncServer::onHttpRequest);
+        connect(httpServer, &QSslServer::startedEncryptionHandshake, this, &SyncServer::onSslConnection);
         updateHttpServerInfo();
     } else {
         qDebug() << "[HTTP] Failed to start server";
@@ -245,88 +265,76 @@ void SyncServer::onWebSocketDisconnected()
     }
 }
 
-void SyncServer::onHttpRequest()
-{
-    QTcpSocket *clientConnection = httpServer->nextPendingConnection();
+void SyncServer::onSslConnection(QSslSocket *clientConnection) {
     if (!clientConnection) {
-        qDebug() << "[HTTP] No pending connection found";
+        qWarning() << "[HTTPS] 无效的 QSslSocket 对象";
         return;
     }
 
-    connect(clientConnection, &QTcpSocket::disconnected, clientConnection, &QTcpSocket::deleteLater);
+    // 连接 encrypted 信号，确保在加密完成后处理
+    connect(clientConnection, &QSslSocket::encrypted, this, [=]() {
+        qDebug() << "[HTTPS] TLS 握手成功，客户端地址：" << clientConnection->peerAddress().toString();
+
+        // 在此处理加密后的请求
+        connect(clientConnection, &QSslSocket::readyRead, this, [=]() {
+            QByteArray request = clientConnection->readAll();
+
+            QString requestStr(request);
+            qDebug() << "[HTTP] Request content:" << requestStr;
+
+            handleHttpRequest(clientConnection, requestStr);
+
+            // 确保在数据完全发送之后才断开连接
+            connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+                if (clientConnection->bytesToWrite() == 0) {
+                    clientConnection->disconnectFromHost();
+                }
+            });
+
+            qDebug() << "[HTTP] Served HTTP request to client" ;
+        });
+    });
+
+    // 如果握手失败，连接 sslErrors 信号
+    connect(clientConnection, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors),
+            this, [=](const QList<QSslError> &errors) {
+                for (const QSslError &error : errors) {
+                    qWarning() << "[HTTPS] SSL 错误：" << error.errorString();
+                }
+                clientConnection->ignoreSslErrors();  // 仅用于测试，生产环境应根据需要处理
+            });
+
+    clientConnection->startServerEncryption();
+}
+void SyncServer::onHttpRequest()
+{
+    QSslSocket *clientConnection = qobject_cast<QSslSocket *>(httpServer->nextPendingConnection());
+
+    if (!clientConnection) {
+        qWarning() << "[HTTPS] 未发现挂起连接";
+        return;
+    }
+
+    // 检查连接是否已加密
+    if (!clientConnection->isEncrypted()) {
+        qWarning() << "[HTTPS] 未加密连接被拒绝，客户端地址：" << clientConnection->peerAddress().toString();
+        clientConnection->disconnectFromHost();
+        return;
+    }
+
+    connect(clientConnection, &QSslSocket::disconnected, clientConnection, &QSslSocket::deleteLater);
 
     // 连接 readyRead 信号到数据处理槽
-    connect(clientConnection, &QTcpSocket::readyRead, this, [this, clientConnection]() {
+    connect(clientConnection, &QSslSocket::encrypted, this, [this, clientConnection]() {
         QByteArray request = clientConnection->readAll();
         QString requestStr(request);
         qDebug() << "[HTTP] Request content:" << requestStr;
 
-        // 判断请求的路径
-        QString filePath;
-        if (requestStr.contains("GET /script.js")) {
-            filePath = jsPath;
-            qDebug() << "[HTTP] Serving script.js";
-        } else if (requestStr.contains("GET / ")) {
-            filePath = htmlPath;
-            qDebug() << "[HTTP] Serving index.html";
-        } else if (requestStr.contains("GET /style.css")) {
-            filePath = cssPath;
-            qDebug() << "[HTTP] Serving style.css";
-        } else {
-            // 如果请求路径无法识别，返回404
-            //QString response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
-            //clientConnection->write(response.toUtf8());
-            //clientConnection->flush();
-            //clientConnection->disconnectFromHost();
-            //qDebug() << "[HTTP] 404 Not Found";
-            // return;
-        }
-
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            qWarning() << "[HTTP] Failed to open file at:" << filePath;
-            clientConnection->close();
-            return;
-        }
-
-        // 读取文件内容并准备响应
-        QByteArray content = file.readAll();
-        file.close();
-
-        // 设置不同的 Content-Type 头部
-        QString contentType = "text/html";
-        if (filePath.endsWith(".js")) {
-            contentType = "application/javascript";
-        } else if (filePath.endsWith(".css")) {
-            contentType = "text/css";
-        }
-
-        QString response = "HTTP/1.1 200 OK\r\n";
-        response += "Content-Type: " + contentType + "; charset=UTF-8\r\n";
-
-        if (contentType == "text/html") {
-            response += "Content-Length: " + QString::number(generatedHtmlContent.toUtf8().size()) + "\r\n";
-            response += "Connection: close\r\n";
-            response += "\r\n";
-            // 确保数据写入完成
-            clientConnection->write(response.toUtf8());
-            clientConnection->write(generatedHtmlContent.toUtf8().data());
-
-        }
-        else {
-            response += "Content-Length: " + QString::number(content.size()) + "\r\n";
-            response += "Connection: close\r\n";
-            response += "\r\n";
-            // 确保数据写入完成
-            clientConnection->write(response.toUtf8());
-            clientConnection->write(content);
-        }
-
-        clientConnection->flush();
+        handleHttpRequest(clientConnection, requestStr);
 
 
         // 确保在数据完全发送之后才断开连接
-        connect(clientConnection, &QTcpSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+        connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
             if (clientConnection->bytesToWrite() == 0) {
                 clientConnection->disconnectFromHost();
             }
@@ -334,6 +342,76 @@ void SyncServer::onHttpRequest()
 
         qDebug() << "[HTTP] Served HTTP request to client" ;
     });
+}
+
+template<typename SocketType>
+void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &requestStr) {
+    // 判断请求的路径
+    QString filePath;
+    if (requestStr.contains("GET /script.js")) {
+        filePath = jsPath;
+        qDebug() << "[HTTP] Serving script.js";
+    } else if (requestStr.contains("GET / ")) {
+        filePath = htmlPath;
+        qDebug() << "[HTTP] Serving index.html";
+    } else if (requestStr.contains("GET /style.css")) {
+        filePath = cssPath;
+        qDebug() << "[HTTP] Serving style.css";
+    } else {
+        //QString response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
+        //clientConnection->write(response.toUtf8());
+        //clientConnection->flush();
+        //clientConnection->disconnectFromHost();
+        //qDebug() << "[HTTP] 404 Not Found";
+        //return;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "[HTTP] Failed to open file at:" << filePath;
+        clientConnection->close();
+        return;
+    }
+
+    // 读取文件内容并准备响应
+    QByteArray content = file.readAll();
+    file.close();
+
+    // 设置不同的 Content-Type 头部
+    QString contentType = "text/html";
+    if (filePath.endsWith(".js")) {
+        contentType = "application/javascript";
+    } else if (filePath.endsWith(".css")) {
+        contentType = "text/css";
+    }
+
+    QString response = "HTTP/1.1 200 OK\r\n";
+    response += "Content-Type: " + contentType + "; charset=UTF-8\r\n";
+
+    if (contentType == "text/html") {
+        response += "Content-Length: " + QString::number(generatedHtmlContent.toUtf8().size()) + "\r\n";
+        response += "Connection: close\r\n";
+        response += "\r\n";
+        clientConnection->write(response.toUtf8());
+        clientConnection->write(generatedHtmlContent.toUtf8());
+    } else {
+        response += "Content-Length: " + QString::number(content.size()) + "\r\n";
+        response += "Connection: close\r\n";
+        response += "\r\n";
+        clientConnection->write(response.toUtf8());
+        clientConnection->write(content);
+    }
+
+    clientConnection->flush();
+
+    // 确保在数据完全发送之后断开连接
+    connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+        if (clientConnection->bytesToWrite() == 0) {
+            clientConnection->disconnectFromHost();
+        }
+    });
+
+    qDebug() << "[HTTP] Served HTTP request to client";
 }
 
 
