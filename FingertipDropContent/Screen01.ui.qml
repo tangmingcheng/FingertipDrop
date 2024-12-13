@@ -60,9 +60,9 @@ Item {
 
     Connections {
         target: backend
-        onUpdateClientStatus:{
-             console.log("connect",connectActive ? "连接中" : "无连接")
-             root.state = "connect"
+        onUpdateClientStatus:function(connectActive) {
+            console.log("connect", connectActive ? "连接中" : "无连接")
+            root.state = connectActive ? "connect" : "disconnect"
         }
     }
 
