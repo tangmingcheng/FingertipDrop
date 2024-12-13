@@ -267,20 +267,20 @@ void SyncServer::onWebSocketDisconnected()
 
 void SyncServer::onSslConnection(QSslSocket *clientConnection) {
     if (!clientConnection) {
-        qWarning() << "[HTTPS] 无效的 QSslSocket 对象";
+        qWarning() << "[HTTPS] invalid QSslSocket obeject";
         return;
     }
 
     // 连接 encrypted 信号，确保在加密完成后处理
     connect(clientConnection, &QSslSocket::encrypted, this, [=]() {
-        qDebug() << "[HTTPS] TLS 握手成功，客户端地址：" << clientConnection->peerAddress().toString();
+        qDebug() << "[HTTPS] TLS handshake success，client ip：" << clientConnection->peerAddress().toString();
 
         // 在此处理加密后的请求
         connect(clientConnection, &QSslSocket::readyRead, this, [=]() {
             QByteArray request = clientConnection->readAll();
 
             QString requestStr(request);
-            qDebug() << "[HTTP] Request content:" << requestStr;
+            qDebug() << "[HTTPS] Request content:" << requestStr;
 
             handleHttpRequest(clientConnection, requestStr);
 
@@ -291,7 +291,7 @@ void SyncServer::onSslConnection(QSslSocket *clientConnection) {
                 }
             });
 
-            qDebug() << "[HTTP] Served HTTP request to client" ;
+            qDebug() << "[HTTPS] Served HTTPS request to client" ;
         });
     });
 
@@ -303,29 +303,20 @@ void SyncServer::onSslConnection(QSslSocket *clientConnection) {
                 }
                 clientConnection->ignoreSslErrors();  // 仅用于测试，生产环境应根据需要处理
             });
-
-    clientConnection->startServerEncryption();
 }
 void SyncServer::onHttpRequest()
 {
-    QSslSocket *clientConnection = qobject_cast<QSslSocket *>(httpServer->nextPendingConnection());
+    QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(httpServer->nextPendingConnection());
 
     if (!clientConnection) {
-        qWarning() << "[HTTPS] 未发现挂起连接";
+        qWarning() << "[HTTPS] no pending connection";
         return;
     }
 
-    // 检查连接是否已加密
-    if (!clientConnection->isEncrypted()) {
-        qWarning() << "[HTTPS] 未加密连接被拒绝，客户端地址：" << clientConnection->peerAddress().toString();
-        clientConnection->disconnectFromHost();
-        return;
-    }
-
-    connect(clientConnection, &QSslSocket::disconnected, clientConnection, &QSslSocket::deleteLater);
+    connect(clientConnection, &QTcpSocket::disconnected, clientConnection, &QTcpSocket::deleteLater);
 
     // 连接 readyRead 信号到数据处理槽
-    connect(clientConnection, &QSslSocket::encrypted, this, [this, clientConnection]() {
+    connect(clientConnection, &QTcpSocket::readyRead, this, [this, clientConnection]() {
         QByteArray request = clientConnection->readAll();
         QString requestStr(request);
         qDebug() << "[HTTP] Request content:" << requestStr;
@@ -334,7 +325,7 @@ void SyncServer::onHttpRequest()
 
 
         // 确保在数据完全发送之后才断开连接
-        connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+        connect(clientConnection, &QTcpSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
             if (clientConnection->bytesToWrite() == 0) {
                 clientConnection->disconnectFromHost();
             }
@@ -405,7 +396,7 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
     clientConnection->flush();
 
     // 确保在数据完全发送之后断开连接
-    connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+    connect(clientConnection, &SocketType::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
         if (clientConnection->bytesToWrite() == 0) {
             clientConnection->disconnectFromHost();
         }
