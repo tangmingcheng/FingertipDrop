@@ -301,7 +301,12 @@ void SyncServer::onSslConnection(QSslSocket *clientConnection) {
                 for (const QSslError &error : errors) {
                     qWarning() << "[HTTPS] SSL 错误：" << error.errorString();
                 }
-                clientConnection->ignoreSslErrors();  // 仅用于测试，生产环境应根据需要处理
+        // 根据环境设置是否忽略 SSL 错误
+#ifdef QT_DEBUG
+        clientConnection->ignoreSslErrors();
+#else
+        clientConnection->disconnectFromHost();
+#endif
             });
 }
 void SyncServer::onHttpRequest()
@@ -331,7 +336,6 @@ void SyncServer::onHttpRequest()
             }
         });
 
-        qDebug() << "[HTTP] Served HTTP request to client" ;
     });
 }
 
