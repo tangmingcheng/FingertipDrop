@@ -50,6 +50,12 @@ Item {
             root.state = "ready"
         }
     }
+    Connections {
+        target: readyscreen
+        onReadytoconnect: {
+            root.state =  "connect"
+        }
+    }
 
     Connections {
         target: connectscreen
@@ -62,7 +68,7 @@ Item {
         target: backend
         onUpdateClientStatus:function(connectActive) {
             console.log("connect", connectActive ? "连接中" : "无连接")
-            root.state = connectActive ? "connect" : "disconnect"
+            root.state = connectActive ? "ready-connect" : "non-connection"
         }
     }
 
@@ -101,6 +107,22 @@ Item {
             }
         },
         State {
+            name: "ready-connect"
+            PropertyChanges {
+                target: startscreen
+                visible: false
+            }
+            PropertyChanges {
+                target: readyscreen
+                visible: true
+                state: "readyToConnect"
+            }
+            PropertyChanges {
+                target: connectscreen
+                visible: false
+            }
+        },
+        State {
             name: "connect"
             PropertyChanges {
                 target: startscreen
@@ -113,6 +135,22 @@ Item {
             PropertyChanges {
                 target: connectscreen
                 visible: true
+            }
+        },
+        State {
+            name: "non-connection"
+            PropertyChanges {
+                target: startscreen
+                visible: false
+            }
+            PropertyChanges {
+                target: readyscreen
+                visible: true
+                state: "startToReady"
+            }
+            PropertyChanges {
+                target: connectscreen
+                visible: false
             }
         }
     ]

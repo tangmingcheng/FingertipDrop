@@ -15,23 +15,17 @@ Item {
     id: root
     width: Constants.width
     height: Constants.height
-    state: "normal"
+    clip: true
 
     property string httpAddress: "192.168.0.1"
     property real httpPort: 8080
     property real buttonoutlneRotation
 
+    signal readytoconnect
+
     Flatbackground {
         id: backgroundfull
         anchors.fill: parent
-    }
-
-    Image {
-        id: backgroundcout
-        y: 0
-        anchors.horizontalCenterOffset: 0
-        source: "assets/backgroundcutout.png"
-        anchors.horizontalCenter: parent.horizontalCenter
     }
 
     Image {
@@ -93,11 +87,11 @@ Item {
     SequentialAnimation {
         id: sequentialAnimationRotion
         running: false
-        loops: Animation.Infinite
-
+        loops: 1
         NumberAnimation {
             target: buttonoutlne
             property: "rotation"
+            loops: Animation.Infinite
             from: 0
             to: 360
         }
@@ -189,13 +183,45 @@ Item {
                     value: 1
                     frame: 120
                 }
-            },
+            }
+        ]
+    }
+
+    Timeline {
+        id: readyToconnecttimline
+        animations: [
+            TimelineAnimation {
+                id: readyToconnecttimelineanimation
+                running: false
+                loops: 1
+                from: 0
+                to: 240
+                duration: 500
+            }
+        ]
+        enabled: false
+        currentFrame: 0
+        startFrame: 0
+        endFrame: 240
+        keyframeGroups: [
             KeyframeGroup {
-                target: sequentialAnimationRotion
-                property: "running"
+                target: buttonoutlne
+                property: "scale"
                 Keyframe {
-                    value: true
+                    value: 1
                     frame: 0
+                }
+                Keyframe {
+                    value: 1.5
+                    frame: 60
+                }
+                Keyframe {
+                    value: 1.5
+                    frame: 100
+                }
+                Keyframe {
+                    value: 0
+                    frame: 240
                 }
             }
         ]
@@ -204,16 +230,29 @@ Item {
     Connections {
         target: timelineanimation
         onFinished: {
+            console.log("state:ready")
             root.state = "ready"
             sequentialAnimationRotion.running = false
-        }
-    }
-    Connections {
-        target: sequentialAnimationRotion
-        onFinished: {
             buttonoutlneRotation = buttonoutlne.rotation
             rotationAnimation.enabled = true
             rotationTimeline.running = true
+        }
+    }
+
+    Connections {
+        target: rotationTimeline
+        onFinished: {
+            console.log("rotationAnimation finished")
+            rotationAnimation.enabled = false
+            rotationTimeline.running = false
+        }
+    }
+
+    Connections {
+        id: connections
+        target: readyToconnecttimelineanimation
+        onFinished: {
+            readytoconnect()
         }
     }
 
@@ -227,6 +266,10 @@ Item {
             }
             PropertyChanges {
                 target: timelineanimation
+                running: true
+            }
+            PropertyChanges {
+                target: sequentialAnimationRotion
                 running: true
             }
         },
@@ -254,6 +297,22 @@ Item {
                 y: 251
                 font.pixelSize: 12
                 anchors.horizontalCenterOffset: 0
+            }
+        },
+        State {
+            name: "readyToConnect"
+            PropertyChanges {
+                target: timeline
+                currentFrame: 120
+            }
+            PropertyChanges {
+                target: readyToconnecttimline
+                currentFrame: 0
+                enabled: true
+            }
+            PropertyChanges {
+                target: readyToconnecttimelineanimation
+                running: true
             }
         }
     ]
