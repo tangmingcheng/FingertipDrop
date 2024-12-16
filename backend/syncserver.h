@@ -56,6 +56,7 @@ private slots:
     void onWebSocketDisconnected();
     void onHttpRequest();
     void onSslConnection(QSslSocket *clientConnection);
+    void onSslErrors(QSslSocket *socket, const QList<QSslError> &errors);
     void onClipboardChanged();  // 剪贴板内容变化时调用
     void updateHttpServerInfo();
 

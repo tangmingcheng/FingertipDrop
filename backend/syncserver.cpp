@@ -103,6 +103,9 @@ void SyncServer::startServers()
         quint16 serverPort = httpServer->serverPort();
         qDebug() << "[HTTP] Server started at " << serverAddress << ":" << serverPort;
         connect(httpServer, &QSslServer::startedEncryptionHandshake, this, &SyncServer::onSslConnection);
+        connect(httpServer, &QSslServer::newConnection, this, &SyncServer::onHttpRequest);
+        connect(httpServer, &QSslServer::sslErrors, this, &SyncServer::onSslErrors);
+
         updateHttpServerInfo();
     } else {
         qDebug() << "[HTTP] Failed to start server";
@@ -283,61 +286,30 @@ void SyncServer::onSslConnection(QSslSocket *clientConnection) {
             qDebug() << "[HTTPS] Request content:" << requestStr;
 
             handleHttpRequest(clientConnection, requestStr);
-
-            // 确保在数据完全发送之后才断开连接
-            connect(clientConnection, &QSslSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
-                if (clientConnection->bytesToWrite() == 0) {
-                    clientConnection->disconnectFromHost();
-                }
-            });
-
-            qDebug() << "[HTTPS] Served HTTPS request to client" ;
         });
     });
-
-    // 如果握手失败，连接 sslErrors 信号
-    connect(clientConnection, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors),
-            this, [=](const QList<QSslError> &errors) {
-                for (const QSslError &error : errors) {
-                    qWarning() << "[HTTPS] SSL 错误：" << error.errorString();
-                }
-        // 根据环境设置是否忽略 SSL 错误
-#ifdef QT_DEBUG
-        clientConnection->ignoreSslErrors();
-#else
-        clientConnection->disconnectFromHost();
-#endif
-            });
 }
+
 void SyncServer::onHttpRequest()
 {
-    QTcpSocket *clientConnection = qobject_cast<QTcpSocket *>(httpServer->nextPendingConnection());
+    QTcpSocket *clientConnection = httpServer->nextPendingConnection();
 
     if (!clientConnection) {
         qWarning() << "[HTTPS] no pending connection";
         return;
     }
+    qDebug() << "[HTTPS] nextPendingConnection";
 
-    connect(clientConnection, &QTcpSocket::disconnected, clientConnection, &QTcpSocket::deleteLater);
-
-    // 连接 readyRead 信号到数据处理槽
-    connect(clientConnection, &QTcpSocket::readyRead, this, [this, clientConnection]() {
-        QByteArray request = clientConnection->readAll();
-        QString requestStr(request);
-        qDebug() << "[HTTP] Request content:" << requestStr;
-
-        handleHttpRequest(clientConnection, requestStr);
-
-
-        // 确保在数据完全发送之后才断开连接
-        connect(clientConnection, &QTcpSocket::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
-            if (clientConnection->bytesToWrite() == 0) {
-                clientConnection->disconnectFromHost();
-            }
-        });
-
-    });
 }
+
+void SyncServer::onSslErrors(QSslSocket *socket, const QList<QSslError> &errors) {
+    qWarning() << "[HTTPS] SSL 错误：";
+    for (const QSslError &error : errors) {
+        qWarning() << " - " << error.errorString();
+    }
+    socket->ignoreSslErrors();  // 可选：忽略 SSL 错误，避免连接被断开
+}
+
 
 template<typename SocketType>
 void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &requestStr) {
@@ -372,6 +344,16 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
     QByteArray content = file.readAll();
     file.close();
 
+
+    // 确保在数据完全发送之后断开连接
+    connect(clientConnection, &SocketType::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
+        if (clientConnection->bytesToWrite() == 0) {
+            qDebug() << "[HTTP] Connection finished and resources released.";
+            clientConnection->disconnectFromHost();
+            clientConnection->deleteLater();
+        }
+    });
+
     // 设置不同的 Content-Type 头部
     QString contentType = "text/html";
     if (filePath.endsWith(".js")) {
@@ -399,12 +381,6 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
 
     clientConnection->flush();
 
-    // 确保在数据完全发送之后断开连接
-    connect(clientConnection, &SocketType::bytesWritten, clientConnection, [clientConnection](qint64 bytes) {
-        if (clientConnection->bytesToWrite() == 0) {
-            clientConnection->disconnectFromHost();
-        }
-    });
 
     qDebug() << "[HTTP] Served HTTP request to client";
 }
