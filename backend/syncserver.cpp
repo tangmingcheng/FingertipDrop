@@ -6,9 +6,9 @@ SyncServer::SyncServer(QObject *parent)
     , webSocketServer(new QWebSocketServer(QStringLiteral("SyncServer"), QWebSocketServer::SecureMode, this))
     , httpServer(new QSslServer(this))
     , clipboard(QGuiApplication::clipboard())
-    , htmlPath("qml/Backend/html/index.html")
-    , jsPath("qml/Backend/js/script.js")
-    , cssPath("qml/Backend/css/style.css")
+    , htmlPath(":/html/index.html")
+    , jsPath(":/js/script.js")
+    , cssPath(":/css/style.css")
     , m_httpServerAddress("")
     , m_httpServerPort(0)
 {
@@ -17,12 +17,12 @@ SyncServer::SyncServer(QObject *parent)
 
 QBindable<QString> SyncServer::bindableHttpServerAddress()
 {
-    return QBindable<QString>(&m_httpServerAddress);
+    return &m_httpServerAddress;
 }
 
 QBindable<quint16> SyncServer::bindableHttpServerPort()
 {
-    return QBindable<quint16>(&m_httpServerPort);
+    return &m_httpServerPort;
 }
 
 QString SyncServer::getLocalIPAddress()

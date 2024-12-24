@@ -12,10 +12,13 @@ qt_add_qml_module(backend
         syncserver.h
         mylistmodel.cpp
         mylistmodel.h
-    RESOURCES
+)
+
+qt_add_resources(backend "htmlfiles"
+    PREFIX "/"
+    FILES
         css/style.css
         html/index.html
-        js/script.js
-)
+        js/script.js)
 
 target_link_libraries(backend PRIVATE Qt6::Gui Qt6::WebSockets)
