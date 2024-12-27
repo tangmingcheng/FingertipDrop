@@ -72,6 +72,7 @@ private:
     QString currentFileType;
     QFile currentFile;
 
+    QString faviconPath;
     QString htmlPath;
     QString jsPath;
     QString cssPath;

@@ -17,6 +17,7 @@ qt_add_qml_module(backend
 qt_add_resources(backend "htmlfiles"
     PREFIX "/"
     FILES
+        assets/favicon.ico
         css/style.css
         html/index.html
         js/script.js)

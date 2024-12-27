@@ -16,7 +16,7 @@ set(QML_IMPORT_PATH ${QT_QML_OUTPUT_DIRECTORY}
     FORCE
 )
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Qml Quick)
 qt_standard_project_setup()
 
 
@@ -27,6 +27,12 @@ qt_add_resources(${CMAKE_PROJECT_NAME} "configuration"
         qtquickcontrols2.conf)
 
 include(qds)
+
+if(WIN32)
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/versioninfo.rc")
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${APP_ICON_RESOURCE})
+endif()
 
 add_subdirectory(backend)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE backend)

@@ -6,6 +6,7 @@ SyncServer::SyncServer(QObject *parent)
     , webSocketServer(new QWebSocketServer(QStringLiteral("SyncServer"), QWebSocketServer::SecureMode, this))
     , httpServer(new QSslServer(this))
     , clipboard(QGuiApplication::clipboard())
+    , faviconPath(":/assets/favicon.ico")
     , htmlPath(":/html/index.html")
     , jsPath(":/js/script.js")
     , cssPath(":/css/style.css")
@@ -324,6 +325,9 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
     } else if (requestStr.contains("GET /style.css")) {
         filePath = cssPath;
         qDebug() << "[HTTP] Serving style.css";
+    } else if (requestStr.contains("GET /favicon.ico")) {
+        filePath = faviconPath;
+        qDebug() << "[HTTP] Serving favicon.ico";
     } else {
         //QString response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
         //clientConnection->write(response.toUtf8());
@@ -334,7 +338,7 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
     }
 
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "[HTTP] Failed to open file at:" << filePath;
         clientConnection->close();
         return;
@@ -360,6 +364,8 @@ void SyncServer::handleHttpRequest(SocketType *clientConnection, const QString &
         contentType = "application/javascript";
     } else if (filePath.endsWith(".css")) {
         contentType = "text/css";
+    } else if (filePath.endsWith(".ico")) {
+        contentType = "image/x-icon";
     }
 
     QString response = "HTTP/1.1 200 OK\r\n";
