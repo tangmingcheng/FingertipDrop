@@ -89,6 +89,7 @@ Item {
         running: false
         loops: 1
         NumberAnimation {
+            id:numberAnimation
             target: buttonoutlne
             property: "rotation"
             loops: Animation.Infinite
@@ -167,7 +168,7 @@ Item {
                 duration: 500
             }
         ]
-        enabled: true
+        enabled: false
         currentFrame: 0
         startFrame: 0
         endFrame: 120
@@ -230,21 +231,20 @@ Item {
     Connections {
         target: timelineanimation
         onFinished: {
-            console.log("state:ready")
-            root.state = "ready"
             sequentialAnimationRotion.running = false
             buttonoutlneRotation = buttonoutlne.rotation
             rotationAnimation.enabled = true
             rotationTimeline.running = true
+
         }
     }
 
     Connections {
         target: rotationTimeline
         onFinished: {
-            console.log("rotationAnimation finished")
-            rotationAnimation.enabled = false
+            rotationAnimation.enabled = true
             rotationTimeline.running = false
+            root.state = "ready"
         }
     }
 
