@@ -197,7 +197,7 @@ void SyncServer::onWebSocketMessageReceived(const QString &message)
                 qDebug() << "Ready to receive file:" << currentFileName << "with type:" << currentFileType;
 
                 // 发送确认消息，准备接收二进制文件数据
-                clientSocket->sendTextMessage("READY_TO_RECEIVE_FILE");
+                senderClient->sendTextMessage("READY_TO_RECEIVE_FILE");
             }
         }
         else {
